@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Trash2, Keyboard, MessageSquare, Info } from 'lucide-react';
+import { Download, Trash2, Keyboard, MessageCircle, Info, Palette } from 'lucide-react';
 
 interface SettingsPopoverProps {
   isOpen: boolean;
   onClose: () => void;
   buttonRef: React.RefObject<HTMLButtonElement>;
+  onOpenAppearance: () => void;
   onOpenKeyboardShortcuts: () => void;
   onOpenFeedback: () => void;
   onOpenAbout: () => void;
@@ -15,6 +16,7 @@ export default function SettingsPopover({
   isOpen, 
   onClose, 
   buttonRef,
+  onOpenAppearance,
   onOpenKeyboardShortcuts,
   onOpenFeedback,
   onOpenAbout
@@ -74,6 +76,20 @@ export default function SettingsPopover({
           className="w-64 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3 z-50 transition-colors duration-200"
         >
           <div className="space-y-1">
+            {/* Appearance Section */}
+            <button
+              onClick={() => {
+                onClose();
+                onOpenAppearance();
+              }}
+              className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors duration-200 flex items-center gap-3"
+            >
+              <Palette size={16} className="text-zinc-600 dark:text-zinc-400" />
+              <span className="text-sm text-zinc-900 dark:text-zinc-50">Appearance</span>
+            </button>
+
+            <div className="border-t border-zinc-200 dark:border-zinc-700 my-2" />
+
             {/* Actions Section */}
             <button
               onClick={() => {
@@ -118,7 +134,7 @@ export default function SettingsPopover({
               }}
               className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors duration-200 flex items-center gap-3"
             >
-              <MessageSquare size={16} className="text-zinc-600 dark:text-zinc-400" />
+              <MessageCircle size={16} className="text-zinc-600 dark:text-zinc-400" />
               <span className="text-sm text-zinc-900 dark:text-zinc-50">Send Feedback</span>
             </button>
 

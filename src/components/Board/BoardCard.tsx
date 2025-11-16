@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { DraftingCompass } from 'lucide-react';
 
 interface Board {
   id: string;
@@ -29,9 +30,9 @@ export default function BoardCard({ board, isActive, onClick }: BoardCardProps) 
       `}
     >
       <div className="flex gap-3">
-        {/* Thumbnail placeholder */}
-        <div className="w-16 h-16 rounded-2xl bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex-shrink-0 flex items-center justify-center transition-colors duration-200">
-          <span className="text-2xl">🎨</span>
+        {/* Icon container */}
+        <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex-shrink-0 flex items-center justify-center transition-colors duration-200">
+          <DraftingCompass className="w-7 h-7 text-zinc-600 dark:text-zinc-400" />
         </div>
         
         {/* Board info */}

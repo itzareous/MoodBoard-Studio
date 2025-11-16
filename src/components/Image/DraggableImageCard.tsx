@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
@@ -8,17 +8,25 @@ interface DraggableImageCardProps {
   image: ImageData;
   isSelected: boolean;
   onSelect: () => void;
+  zoom: number;
+  pan: { x: number; y: number };
 }
 
-export default function DraggableImageCard({ image, isSelected, onSelect }: DraggableImageCardProps) {
+export default function DraggableImageCard({ image, isSelected, onSelect, zoom, pan }: DraggableImageCardProps) {
   const { updateImagePosition, updateImageSize, deleteImage } = useBoards();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   const handleDragEnd = (_: any, info: any) => {
-    const newX = image.x + info.offset.x;
-    const newY = image.y + info.offset.y;
+    // Transform the drag offset by inverse of zoom
+    const scaledOffsetX = info.offset.x / zoom;
+    const scaledOffsetY = info.offset.y / zoom;
+    
+    const newX = image.x + scaledOffsetX;
+    const newY = image.y + scaledOffsetY;
+    
     updateImagePosition(image.id, newX, newY);
     setIsDragging(false);
   };
@@ -34,8 +42,8 @@ export default function DraggableImageCard({ image, isSelected, onSelect }: Drag
     const aspectRatio = image.width / image.height;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
+      const deltaX = (moveEvent.clientX - startX) / zoom;
+      const deltaY = (moveEvent.clientY - startY) / zoom;
       
       let newWidth = startWidth;
       let newHeight = startHeight;
@@ -61,11 +69,42 @@ export default function DraggableImageCard({ image, isSelected, onSelect }: Drag
       setIsResizing(false);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      cleanupRef.current = null;
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    
+    // Store cleanup function
+    cleanupRef.current = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+      }
+    };
+  }, []);
+
+  // Keyboard shortcut for delete
+  useEffect(() => {
+    if (!isSelected) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteImage(image.id);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSelected, image.id, deleteImage]);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,12 +151,12 @@ export default function DraggableImageCard({ image, isSelected, onSelect }: Drag
       {/* Selection border and handles */}
       {isSelected && !isDragging && (
         <>
-          {/* Delete button */}
+          {/* Delete button - top right with better visibility */}
           <button
             onClick={handleDelete}
-            className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 border-2 border-white dark:border-zinc-950 z-10"
+            className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 border-2 border-white dark:border-zinc-950 z-20 shadow-lg"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
 
           {/* Resize handles */}

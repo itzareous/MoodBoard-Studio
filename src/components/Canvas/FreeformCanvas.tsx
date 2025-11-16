@@ -4,8 +4,6 @@ import { Upload, Plus, Minus } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
 import DraggableImageCard from '@/components/Image/DraggableImageCard';
 
-const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
-
 export default function FreeformCanvas() {
   const { activeBoard, addImage } = useBoards();
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
@@ -16,45 +14,74 @@ export default function FreeformCanvas() {
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handleFileUpload = useCallback((files: FileList | null) => {
-    if (!files) return;
+    if (!files || files.length === 0) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
 
     Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
+      try {
+        // Validate file type
+        if (!validTypes.includes(file.type)) {
+          alert(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, WEBP allowed.`);
+          return;
+        }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxWidth = 400;
-          const scale = Math.min(1, maxWidth / img.width);
+        // Validate file size
+        if (file.size > maxSize) {
+          alert(`File too large: ${file.name}. Maximum size is 10MB.`);
+          return;
+        }
+
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          if (!e.target?.result) return;
           
-          addImage({
-            id: `img-${Date.now()}-${Math.random()}`,
-            src: e.target?.result as string,
-            x: 100 + Math.random() * 200,
-            y: 100 + Math.random() * 200,
-            width: img.width * scale,
-            height: img.height * scale,
-            rotation: 0
-          });
+          const img = new Image();
+          
+          img.onload = () => {
+            const maxWidth = 400;
+            const scale = Math.min(1, maxWidth / img.width);
+            
+            addImage({
+              id: `img-${Date.now()}-${Math.random()}`,
+              src: e.target!.result as string,
+              x: 100 + Math.random() * 200,
+              y: 100 + Math.random() * 200,
+              width: img.width * scale,
+              height: img.height * scale,
+              rotation: 0
+            });
+          };
+          
+          img.onerror = () => {
+            alert(`Failed to load image: ${file.name}`);
+          };
+          
+          img.src = e.target.result as string;
         };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+        
+        reader.onerror = () => {
+          alert(`Failed to read file: ${file.name}`);
+        };
+        
+        reader.readAsDataURL(file);
+        
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert(`Error uploading ${file.name}. Please try again.`);
+      }
     });
   }, [addImage]);
 
   const zoomIn = useCallback(() => {
-    const currentIndex = ZOOM_LEVELS.findIndex(level => level >= zoom);
-    const nextIndex = Math.min(currentIndex + 1, ZOOM_LEVELS.length - 1);
-    setZoom(ZOOM_LEVELS[nextIndex]);
-  }, [zoom]);
+    setZoom(prev => Math.min(4, prev + 0.1));
+  }, []);
 
   const zoomOut = useCallback(() => {
-    const currentIndex = ZOOM_LEVELS.findIndex(level => level >= zoom);
-    const prevIndex = Math.max(currentIndex - 1, 0);
-    setZoom(ZOOM_LEVELS[prevIndex]);
-  }, [zoom]);
+    setZoom(prev => Math.max(0.25, prev - 0.1));
+  }, []);
 
   const resetZoom = useCallback(() => {
     setZoom(1);
@@ -64,10 +91,30 @@ export default function FreeformCanvas() {
     e.preventDefault();
     
     if (e.ctrlKey || e.metaKey) {
-      // Zoom mode
+      // Zoom mode with mouse cursor as anchor point
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       const newZoom = Math.max(0.25, Math.min(4, zoom + delta));
+      
+      // Calculate the point in the canvas that's under the mouse
+      const zoomPoint = {
+        x: (mouseX - panOffset.x) / zoom,
+        y: (mouseY - panOffset.y) / zoom
+      };
+      
+      // Calculate new pan to keep that point under the mouse
+      const newPan = {
+        x: mouseX - zoomPoint.x * newZoom,
+        y: mouseY - zoomPoint.y * newZoom
+      };
+      
       setZoom(newZoom);
+      setPanOffset(newPan);
     } else {
       // Pan mode - trackpad scroll
       setPanOffset(prev => ({
@@ -75,7 +122,7 @@ export default function FreeformCanvas() {
         y: prev.y - e.deltaY
       }));
     }
-  }, [zoom]);
+  }, [zoom, panOffset]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -118,8 +165,10 @@ export default function FreeformCanvas() {
     e.preventDefault();
   };
 
-  const canZoomIn = zoom < ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
-  const canZoomOut = zoom > ZOOM_LEVELS[0];
+  const canZoomIn = zoom < 4;
+  const canZoomOut = zoom > 0.25;
+
+  const images = activeBoard?.images || [];
 
   return (
     <div 
@@ -151,22 +200,23 @@ export default function FreeformCanvas() {
           ref={contentRef}
           animate={{ scale: zoom }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          style={{ transformOrigin: 'center center' }}
           className="relative w-[3000px] h-[3000px]"
         >
-          {activeBoard?.images.map((image) => (
+          {images.map((image) => (
             <DraggableImageCard
               key={image.id}
               image={image}
               isSelected={selectedImageId === image.id}
               onSelect={() => setSelectedImageId(image.id)}
+              zoom={zoom}
+              pan={panOffset}
             />
           ))}
         </motion.div>
       </div>
 
       {/* Empty state */}
-      {(!activeBoard?.images || activeBoard.images.length === 0) && (
+      {images.length === 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -192,16 +242,14 @@ export default function FreeformCanvas() {
         </motion.div>
       )}
 
-      {/* Upload button */}
-      {activeBoard?.images && activeBoard.images.length > 0 && (
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="absolute bottom-6 right-32 px-6 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border border-zinc-900 dark:border-zinc-50 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 flex items-center gap-2 z-10 font-medium"
-        >
-          <Upload size={18} />
-          Add Images
-        </button>
-      )}
+      {/* Add Images button - Fixed top right, below TopBar */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="fixed top-24 right-8 px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border border-zinc-900 dark:border-zinc-50 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 flex items-center gap-2 z-10 font-medium shadow-lg"
+      >
+        <Upload size={18} />
+        Add Images
+      </button>
 
       {/* Zoom controls */}
       <motion.div

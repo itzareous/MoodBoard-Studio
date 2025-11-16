@@ -2,16 +2,16 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Grid3x3, Maximize2, Share2, Settings } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
-import Button from '@/components/shared/Button';
-import ThemeToggle from '@/components/shared/ThemeToggle';
 import SettingsPopover from '@/components/shared/SettingsPopover';
 import FeedbackModal from '@/components/modals/FeedbackModal';
 import KeyboardShortcutsModal from '@/components/modals/KeyboardShortcutsModal';
 import AboutModal from '@/components/modals/AboutModal';
+import AppearanceModal from '@/components/modals/AppearanceModal';
 
 export default function TopBar() {
   const { activeBoard, setViewMode } = useBoards();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -67,13 +67,15 @@ export default function TopBar() {
             <Share2 size={16} />
             Share
           </button>
-          <ThemeToggle />
           <button
             ref={settingsButtonRef}
             className="w-10 h-10 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200"
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
           >
-            <Settings size={20} className="text-zinc-600 dark:text-zinc-400 transition-colors duration-200" />
+            <Settings
+              size={20}
+              className="text-zinc-600 dark:text-zinc-400 transition-colors duration-200"
+            />
           </button>
         </div>
 
@@ -81,6 +83,7 @@ export default function TopBar() {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           buttonRef={settingsButtonRef}
+          onOpenAppearance={() => setShowAppearance(true)}
           onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
           onOpenFeedback={() => setShowFeedback(true)}
           onOpenAbout={() => setShowAbout(true)}
@@ -88,6 +91,7 @@ export default function TopBar() {
       </motion.header>
 
       {/* Modals */}
+      <AppearanceModal isOpen={showAppearance} onClose={() => setShowAppearance(false)} />
       <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
       <KeyboardShortcutsModal isOpen={showKeyboardShortcuts} onClose={() => setShowKeyboardShortcuts(false)} />
       <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />

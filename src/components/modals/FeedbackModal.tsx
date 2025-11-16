@@ -67,9 +67,9 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-800 transition-colors duration-200"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 dark:bg-zinc-600 dark:hover:bg-zinc-500 transition-colors duration-200"
                 >
-                  <X size={20} className="text-zinc-400" />
+                  <X size={20} className="text-zinc-200" />
                 </button>
               </div>
 
