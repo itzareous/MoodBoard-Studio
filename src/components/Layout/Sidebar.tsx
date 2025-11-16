@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
+import { useTheme } from '@/context/ThemeContext';
 import BoardCard from '@/components/Board/BoardCard';
 import Button from '@/components/shared/Button';
 
 export default function Sidebar() {
   const { boards, activeBoard, setActiveBoard } = useBoards();
+  const { theme } = useTheme();
 
   const container = {
     hidden: { opacity: 0 },
@@ -32,10 +34,12 @@ export default function Sidebar() {
       {/* Header */}
       <div className="p-6 border-b border-zinc-200 dark:border-zinc-700 transition-colors duration-200">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 transition-colors duration-200">
-            Curate
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 transition-colors duration-200">
+          <img 
+            src={theme === 'dark' ? '/images/curate logo dark.svg' : '/images/curate logo.svg'}
+            alt="Curate" 
+            className="h-10 w-auto mb-2"
+          />
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 transition-colors duration-200">
             A moodboard studio
           </p>
         </div>
