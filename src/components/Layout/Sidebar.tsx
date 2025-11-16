@@ -27,13 +27,18 @@ export default function Sidebar() {
       initial={{ x: -280, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="w-[280px] h-screen bg-gray-50 border-r border-border flex flex-col"
+      className="w-[280px] h-screen bg-white dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-700 flex flex-col transition-colors duration-200"
     >
       {/* Header */}
-      <div className="p-4 border-b border-border">
-        <h1 className="text-xl font-bold text-foreground mb-4">
-          MoodBoard Studio
-        </h1>
+      <div className="p-4 border-b border-zinc-200 dark:border-zinc-700 transition-colors duration-200">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 transition-colors duration-200">
+            Curate
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 transition-colors duration-200">
+            A moodboard studio
+          </p>
+        </div>
         <Button 
           variant="primary" 
           className="w-full flex items-center justify-center gap-2"

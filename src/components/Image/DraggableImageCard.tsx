@@ -94,8 +94,8 @@ export default function DraggableImageCard({ image, isSelected, onSelect }: Drag
         height: image.height,
         cursor: isDragging ? 'grabbing' : 'grab'
       }}
-      className={`rounded-lg overflow-hidden shadow-lg ${
-        isSelected ? 'ring-2 ring-blue-500' : ''
+      className={`rounded-lg overflow-hidden shadow-lg transition-shadow duration-200 ${
+        isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
       }`}
       onClick={(e) => {
         e.stopPropagation();
@@ -115,7 +115,7 @@ export default function DraggableImageCard({ image, isSelected, onSelect }: Drag
           {/* Delete button */}
           <button
             onClick={handleDelete}
-            className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-md z-10"
+            className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-md z-10"
           >
             <X size={14} />
           </button>
@@ -123,19 +123,19 @@ export default function DraggableImageCard({ image, isSelected, onSelect }: Drag
           {/* Resize handles */}
           <div
             onMouseDown={(e) => handleResizeStart(e, 'nw')}
-            className="absolute -top-1 -left-1 w-3 h-3 bg-white border-2 border-blue-500 rounded-sm cursor-nw-resize"
+            className="absolute -top-1 -left-1 w-3 h-3 bg-white border-2 border-blue-500 dark:border-blue-400 rounded-sm cursor-nw-resize"
           />
           <div
             onMouseDown={(e) => handleResizeStart(e, 'ne')}
-            className="absolute -top-1 -right-1 w-3 h-3 bg-white border-2 border-blue-500 rounded-sm cursor-ne-resize"
+            className="absolute -top-1 -right-1 w-3 h-3 bg-white border-2 border-blue-500 dark:border-blue-400 rounded-sm cursor-ne-resize"
           />
           <div
             onMouseDown={(e) => handleResizeStart(e, 'sw')}
-            className="absolute -bottom-1 -left-1 w-3 h-3 bg-white border-2 border-blue-500 rounded-sm cursor-sw-resize"
+            className="absolute -bottom-1 -left-1 w-3 h-3 bg-white border-2 border-blue-500 dark:border-blue-400 rounded-sm cursor-sw-resize"
           />
           <div
             onMouseDown={(e) => handleResizeStart(e, 'se')}
-            className="absolute -bottom-1 -right-1 w-3 h-3 bg-white border-2 border-blue-500 rounded-sm cursor-se-resize"
+            className="absolute -bottom-1 -right-1 w-3 h-3 bg-white border-2 border-blue-500 dark:border-blue-400 rounded-sm cursor-se-resize"
           />
         </>
       )}
