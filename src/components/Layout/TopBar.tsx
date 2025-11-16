@@ -12,7 +12,7 @@ export default function TopBar() {
       initial={{ y: -64, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
-      className="h-16 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between px-6 sticky top-0 z-10 transition-colors duration-200"
+      className="h-20 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between px-8 py-4 sticky top-0 z-10 transition-colors duration-200"
     >
       {/* Left: Board name */}
       <div className="flex items-center gap-4">
@@ -22,11 +22,11 @@ export default function TopBar() {
       </div>
 
       {/* Center: View mode toggle */}
-      <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-700 rounded-lg p-1 transition-colors duration-200">
+      <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-full p-1 transition-colors duration-200">
         <button
-          className={`px-4 py-1.5 rounded-md text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
+          className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
             activeBoard?.viewMode === 'grid'
-              ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-50'
+              ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-600'
               : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50'
           }`}
           onClick={() => setViewMode('grid')}
@@ -35,9 +35,9 @@ export default function TopBar() {
           Grid
         </button>
         <button
-          className={`px-4 py-1.5 rounded-md text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
+          className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
             activeBoard?.viewMode === 'freeform'
-              ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-50'
+              ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-600'
               : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50'
           }`}
           onClick={() => setViewMode('freeform')}
@@ -49,18 +49,16 @@ export default function TopBar() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-3">
-        <Button 
-          variant="secondary" 
-          size="sm"
-          className="flex items-center gap-2"
+        <button
+          className="flex items-center gap-2 px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200"
           onClick={() => console.log('Share board')}
         >
           <Share2 size={16} />
           Share
-        </Button>
+        </button>
         <ThemeToggle />
         <button
-          className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-200"
+          className="w-10 h-10 flex items-center justify-center border border-zinc-200 dark:border-zinc-700 rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200"
           onClick={() => console.log('Settings')}
         >
           <Settings size={20} className="text-zinc-600 dark:text-zinc-400 transition-colors duration-200" />

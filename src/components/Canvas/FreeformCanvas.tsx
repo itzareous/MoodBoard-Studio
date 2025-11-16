@@ -124,11 +124,8 @@ export default function FreeformCanvas() {
   return (
     <div 
       ref={canvasRef}
-      className="relative w-full h-full overflow-hidden bg-zinc-50 dark:bg-zinc-900 transition-colors duration-200"
+      className="relative w-full h-full overflow-hidden bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200"
       style={{
-        backgroundImage: `radial-gradient(circle, rgb(212 212 216) 1px, transparent 1px)`,
-        backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
-        backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
         cursor: 'grab'
       }}
       onClick={handleCanvasClick}
@@ -175,19 +172,19 @@ export default function FreeformCanvas() {
           animate={{ opacity: 1, scale: 1 }}
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
         >
-          <div className="text-center">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 flex items-center justify-center transition-colors duration-200">
-              <Upload size={40} className="text-primary transition-colors duration-200" />
+          <div className="text-center max-w-md">
+            <div className="w-32 h-32 mx-auto mb-8 rounded-3xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition-colors duration-200">
+              <Upload size={48} className="text-zinc-400 dark:text-zinc-500 transition-colors duration-200" />
             </div>
-            <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2 transition-colors duration-200">
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-3 transition-colors duration-200">
               Click to upload or drag images here
             </h3>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-sm transition-colors duration-200">
+            <p className="text-zinc-500 dark:text-zinc-400 mb-6 transition-colors duration-200">
               Start building your mood board in freeform mode
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="mt-4 px-6 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors duration-200 pointer-events-auto"
+              className="px-8 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border border-zinc-900 dark:border-zinc-50 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 pointer-events-auto font-medium"
             >
               Upload Images
             </button>
@@ -199,7 +196,7 @@ export default function FreeformCanvas() {
       {activeBoard?.images && activeBoard.images.length > 0 && (
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="absolute bottom-6 right-32 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 flex items-center gap-2 z-10"
+          className="absolute bottom-6 right-32 px-6 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border border-zinc-900 dark:border-zinc-50 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 flex items-center gap-2 z-10 font-medium"
         >
           <Upload size={18} />
           Add Images
@@ -211,21 +208,21 @@ export default function FreeformCanvas() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="absolute bottom-6 right-6 bg-zinc-900 dark:bg-zinc-800 border border-zinc-700 dark:border-zinc-600 rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 z-10 transition-colors duration-200"
+        className="absolute bottom-6 right-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full flex items-center gap-2 px-3 py-2 z-10 transition-colors duration-200"
       >
         <button
           onClick={zoomOut}
           disabled={!canZoomOut}
-          className={`w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-700 dark:hover:bg-zinc-700 transition-colors duration-200 ${
+          className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-200 ${
             !canZoomOut ? 'opacity-40 cursor-not-allowed' : ''
           }`}
         >
-          <Minus size={16} className="text-white dark:text-zinc-50" />
+          <Minus size={16} className="text-zinc-900 dark:text-zinc-50" />
         </button>
         
         <button
           onClick={resetZoom}
-          className="px-3 py-1 text-sm font-medium text-white dark:text-zinc-50 hover:bg-zinc-700 dark:hover:bg-zinc-700 rounded transition-colors duration-200 min-w-[60px]"
+          className="px-4 py-1 text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full transition-colors duration-200 min-w-[60px]"
         >
           {Math.round(zoom * 100)}%
         </button>
@@ -233,11 +230,11 @@ export default function FreeformCanvas() {
         <button
           onClick={zoomIn}
           disabled={!canZoomIn}
-          className={`w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-700 dark:hover:bg-zinc-700 transition-colors duration-200 ${
+          className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-200 ${
             !canZoomIn ? 'opacity-40 cursor-not-allowed' : ''
           }`}
         >
-          <Plus size={16} className="text-white dark:text-zinc-50" />
+          <Plus size={16} className="text-zinc-900 dark:text-zinc-50" />
         </button>
       </motion.div>
     </div>

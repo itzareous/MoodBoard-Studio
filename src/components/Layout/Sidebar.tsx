@@ -27,15 +27,15 @@ export default function Sidebar() {
       initial={{ x: -280, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="w-[280px] h-screen bg-white dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-700 flex flex-col transition-colors duration-200"
+      className="w-[280px] h-screen bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 flex flex-col transition-colors duration-200"
     >
       {/* Header */}
-      <div className="p-4 border-b border-zinc-200 dark:border-zinc-700 transition-colors duration-200">
-        <div className="mb-4">
+      <div className="p-6 border-b border-zinc-200 dark:border-zinc-700 transition-colors duration-200">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 transition-colors duration-200">
             Curate
           </h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 transition-colors duration-200">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 transition-colors duration-200">
             A moodboard studio
           </p>
         </div>
@@ -54,7 +54,7 @@ export default function Sidebar() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="flex-1 overflow-y-auto p-4 space-y-3"
+        className="flex-1 overflow-y-auto p-6 space-y-3"
       >
         {boards.map((board) => (
           <motion.div key={board.id} variants={item}>
