@@ -10,6 +10,8 @@ interface SettingsPopoverProps {
   onOpenKeyboardShortcuts: () => void;
   onOpenFeedback: () => void;
   onOpenAbout: () => void;
+  onOpenExport: () => void;
+  onOpenClear: () => void;
 }
 
 export default function SettingsPopover({ 
@@ -19,7 +21,9 @@ export default function SettingsPopover({
   onOpenAppearance,
   onOpenKeyboardShortcuts,
   onOpenFeedback,
-  onOpenAbout
+  onOpenAbout,
+  onOpenExport,
+  onOpenClear
 }: SettingsPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -93,8 +97,8 @@ export default function SettingsPopover({
             {/* Actions Section */}
             <button
               onClick={() => {
-                console.log('Export Board');
                 onClose();
+                onOpenExport();
               }}
               className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors duration-200 flex items-center gap-3"
             >
@@ -104,8 +108,8 @@ export default function SettingsPopover({
 
             <button
               onClick={() => {
-                console.log('Clear Board');
                 onClose();
+                onOpenClear();
               }}
               className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 flex items-center gap-3"
             >

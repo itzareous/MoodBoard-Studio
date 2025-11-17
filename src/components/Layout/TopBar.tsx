@@ -3,23 +3,26 @@ import { motion } from 'framer-motion';
 import { Grid3x3, Maximize2, Share2, Settings, Pencil } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
 import SettingsPopover from '@/components/shared/SettingsPopover';
+import AppearanceModal from '@/components/modals/AppearanceModal';
 import FeedbackModal from '@/components/modals/FeedbackModal';
 import KeyboardShortcutsModal from '@/components/modals/KeyboardShortcutsModal';
-import AppearanceModal from '@/components/modals/AppearanceModal';
+import ExportBoardModal from '@/components/modals/ExportBoardModal';
+import ClearBoardModal from '@/components/modals/ClearBoardModal';
 
 export default function TopBar() {
-  const { activeBoard, setViewMode, updateBoardName } = useBoards();
+  const { activeBoard, updateBoardName, setViewMode, clearBoard } = useBoards();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(activeBoard?.name || '');
+  const [isHovered, setIsHovered] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(activeBoard?.name || '');
-  const [isHovered, setIsHovered] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
   // Focus input when editing starts
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -159,6 +162,8 @@ export default function TopBar() {
           onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
           onOpenFeedback={() => setShowFeedback(true)}
           onOpenAbout={() => {}}
+          onOpenExport={() => setShowExportModal(true)}
+          onOpenClear={() => setShowClearModal(true)}
         />
       </motion.header>
 
@@ -166,6 +171,16 @@ export default function TopBar() {
       <AppearanceModal isOpen={showAppearance} onClose={() => setShowAppearance(false)} />
       <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
       <KeyboardShortcutsModal isOpen={showKeyboardShortcuts} onClose={() => setShowKeyboardShortcuts(false)} />
+      <ExportBoardModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
+      <ClearBoardModal
+        isOpen={showClearModal}
+        boardName={activeBoard.name}
+        imageCount={activeBoard.images.length}
+        groupCount={activeBoard.groups.length}
+        noteCount={activeBoard.notes.length}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={() => clearBoard(activeBoard.id)}
+      />
     </>
   );
 }

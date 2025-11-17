@@ -69,6 +69,7 @@ interface BoardContextType {
   updateNoteSize: (boardId: string, noteId: string, width: number, height: number) => void;
   updateNoteColor: (boardId: string, noteId: string, color: string) => void;
   deleteNote: (boardId: string, noteId: string) => void;
+  clearBoard: (boardId: string) => void;
 }
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
@@ -533,6 +534,19 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     ));
   };
 
+  const clearBoard = (boardId: string) => {
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? {
+            ...board,
+            images: [],
+            groups: [],
+            notes: []
+          }
+        : board
+    ));
+  };
+
   return (
     <BoardContext.Provider value={{ 
       boards, 
@@ -559,7 +573,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       updateNotePosition,
       updateNoteSize,
       updateNoteColor,
-      deleteNote
+      deleteNote,
+      clearBoard
     }}>
       {children}
     </BoardContext.Provider>
