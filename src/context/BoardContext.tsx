@@ -15,6 +15,11 @@ export interface Group {
   name: string;
   imageIds: string[];
   color?: string;
+  layoutDirection: 'horizontal' | 'vertical';
+  gap: number;
+  padding: number;
+  x: number;
+  y: number;
 }
 
 interface Board {
@@ -43,6 +48,9 @@ interface BoardContextType {
   updateGroupName: (groupId: string, newName: string) => void;
   deleteGroup: (groupId: string, deleteImages: boolean) => void;
   ungroupImages: (groupId: string) => void;
+  updateGroupPosition: (groupId: string, deltaX: number, deltaY: number) => void;
+  updateGroupLayout: (groupId: string, layoutDirection: 'horizontal' | 'vertical') => void;
+  updateGroupGap: (groupId: string, gap: number) => void;
 }
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
@@ -75,6 +83,33 @@ const sampleBoards: Board[] = [
     viewMode: 'grid'
   }
 ];
+
+// Helper function to arrange images in group
+const arrangeGroupImages = (images: ImageData[], group: Group): ImageData[] => {
+  const groupImages = images.filter(img => group.imageIds.includes(img.id));
+  const otherImages = images.filter(img => !group.imageIds.includes(img.id));
+  
+  let currentX = group.x + group.padding;
+  let currentY = group.y + group.padding;
+  
+  const arrangedImages = groupImages.map(img => {
+    const newImg = {
+      ...img,
+      x: currentX,
+      y: currentY,
+    };
+    
+    if (group.layoutDirection === 'horizontal') {
+      currentX += img.width + group.gap;
+    } else {
+      currentY += img.height + group.gap;
+    }
+    
+    return newImg;
+  });
+  
+  return [...otherImages, ...arrangedImages];
+};
 
 export function BoardProvider({ children }: { children: ReactNode }) {
   // Load boards from localStorage on mount
@@ -216,30 +251,37 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     ));
   };
 
-  const deleteImage = (imageId: string) => {
-    setBoards(prev => prev.map(board =>
-      board.id === activeBoardId
-        ? {
-            ...board,
-            images: board.images.filter(img => img.id !== imageId)
-          }
-        : board
-    ));
-  };
-
   const createGroup = (name: string, imageIds: string[]) => {
-    const newGroup: Group = {
-      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      imageIds,
-      color: undefined,
-    };
-    
-    setBoards(prev => prev.map(board =>
-      board.id === activeBoardId
-        ? { ...board, groups: [...board.groups, newGroup] }
-        : board
-    ));
+    setBoards(prev => prev.map(board => {
+      if (board.id !== activeBoardId) return board;
+      
+      const selectedImages = board.images.filter(img => imageIds.includes(img.id));
+      
+      if (selectedImages.length === 0) return board;
+      
+      const minX = Math.min(...selectedImages.map(img => img.x));
+      const minY = Math.min(...selectedImages.map(img => img.y));
+      
+      const newGroup: Group = {
+        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        imageIds,
+        color: undefined,
+        layoutDirection: 'horizontal',
+        gap: 20,
+        padding: 20,
+        x: minX,
+        y: minY,
+      };
+      
+      const updatedImages = arrangeGroupImages(board.images, newGroup);
+      
+      return {
+        ...board,
+        groups: [...board.groups, newGroup],
+        images: updatedImages
+      };
+    }));
   };
 
   const updateGroupName = (groupId: string, newName: string) => {
@@ -280,6 +322,104 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     ));
   };
 
+  const updateGroupPosition = (groupId: string, deltaX: number, deltaY: number) => {
+    setBoards(prev => prev.map(board => {
+      if (board.id !== activeBoardId) return board;
+      
+      const group = board.groups.find(g => g.id === groupId);
+      if (!group) return board;
+      
+      const updatedGroup = {
+        ...group,
+        x: group.x + deltaX,
+        y: group.y + deltaY,
+      };
+      
+      const updatedImages = board.images.map(img => {
+        if (group.imageIds.includes(img.id)) {
+          return {
+            ...img,
+            x: img.x + deltaX,
+            y: img.y + deltaY,
+          };
+        }
+        return img;
+      });
+      
+      return {
+        ...board,
+        groups: board.groups.map(g => g.id === groupId ? updatedGroup : g),
+        images: updatedImages,
+      };
+    }));
+  };
+
+  const updateGroupLayout = (groupId: string, layoutDirection: 'horizontal' | 'vertical') => {
+    setBoards(prev => prev.map(board => {
+      if (board.id !== activeBoardId) return board;
+      
+      const group = board.groups.find(g => g.id === groupId);
+      if (!group) return board;
+      
+      const updatedGroup = { ...group, layoutDirection };
+      const updatedImages = arrangeGroupImages(board.images, updatedGroup);
+      
+      return {
+        ...board,
+        groups: board.groups.map(g => g.id === groupId ? updatedGroup : g),
+        images: updatedImages,
+      };
+    }));
+  };
+
+  const updateGroupGap = (groupId: string, gap: number) => {
+    setBoards(prev => prev.map(board => {
+      if (board.id !== activeBoardId) return board;
+      
+      const group = board.groups.find(g => g.id === groupId);
+      if (!group) return board;
+      
+      const updatedGroup = { ...group, gap };
+      const updatedImages = arrangeGroupImages(board.images, updatedGroup);
+      
+      return {
+        ...board,
+        groups: board.groups.map(g => g.id === groupId ? updatedGroup : g),
+        images: updatedImages,
+      };
+    }));
+  };
+
+  const deleteImage = (imageId: string) => {
+    setBoards(prev => prev.map(board => {
+      if (board.id !== activeBoardId) return board;
+      
+      const imageGroup = board.groups.find(g => g.imageIds.includes(imageId));
+      
+      const updatedImages = board.images.filter(img => img.id !== imageId);
+      
+      if (imageGroup) {
+        const updatedGroup = {
+          ...imageGroup,
+          imageIds: imageGroup.imageIds.filter(id => id !== imageId)
+        };
+        
+        const reflowedImages = arrangeGroupImages(updatedImages, updatedGroup);
+        
+        return {
+          ...board,
+          images: reflowedImages,
+          groups: board.groups.map(g => g.id === imageGroup.id ? updatedGroup : g)
+        };
+      }
+      
+      return {
+        ...board,
+        images: updatedImages
+      };
+    }));
+  };
+
   return (
     <BoardContext.Provider value={{ 
       boards, 
@@ -297,7 +437,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       createGroup,
       updateGroupName,
       deleteGroup,
-      ungroupImages
+      ungroupImages,
+      updateGroupPosition,
+      updateGroupLayout,
+      updateGroupGap
     }}>
       {children}
     </BoardContext.Provider>

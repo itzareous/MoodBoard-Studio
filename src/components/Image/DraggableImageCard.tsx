@@ -11,6 +11,11 @@ interface DraggableImageCardProps {
   zoom: number;
   pan: { x: number; y: number };
   isDraggingSelection?: boolean;
+  snapToGrid?: boolean;
+  gridSize?: number;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  isInGroup?: boolean;
 }
 
 export default function DraggableImageCard({ 
@@ -19,7 +24,12 @@ export default function DraggableImageCard({
   onSelect, 
   zoom, 
   pan,
-  isDraggingSelection = false
+  isDraggingSelection = false,
+  snapToGrid = false,
+  gridSize = 20,
+  onDragStart,
+  onDragEnd,
+  isInGroup = false
 }: DraggableImageCardProps) {
   const { updateImagePosition, updateImageSize, deleteImage } = useBoards();
   const [isDragging, setIsDragging] = useState(false);
@@ -28,15 +38,21 @@ export default function DraggableImageCard({
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const handleDragEnd = (_: any, info: any) => {
-    // Transform the drag offset by inverse of zoom
     const scaledOffsetX = info.offset.x / zoom;
     const scaledOffsetY = info.offset.y / zoom;
     
-    const newX = image.x + scaledOffsetX;
-    const newY = image.y + scaledOffsetY;
+    let newX = image.x + scaledOffsetX;
+    let newY = image.y + scaledOffsetY;
+    
+    // Apply snap to grid
+    if (snapToGrid) {
+      newX = Math.round(newX / gridSize) * gridSize;
+      newY = Math.round(newY / gridSize) * gridSize;
+    }
     
     updateImagePosition(image.id, newX, newY);
     setIsDragging(false);
+    onDragEnd?.();
   };
 
   const handleResizeStart = (e: React.MouseEvent, corner: string) => {
@@ -112,11 +128,12 @@ export default function DraggableImageCard({
   return (
     <motion.div
       ref={imageRef}
-      drag={!isDraggingSelection}
+      drag={!isDraggingSelection && !isInGroup}
       dragMomentum={false}
       dragElastic={0}
       onDragStart={() => {
         setIsDragging(true);
+        onDragStart?.();
       }}
       onDragEnd={handleDragEnd}
       initial={{ opacity: 0, scale: 0.8 }}
@@ -128,7 +145,7 @@ export default function DraggableImageCard({
         top: image.y,
         width: image.width,
         height: image.height,
-        cursor: isDraggingSelection ? 'default' : (isDragging ? 'grabbing' : 'grab')
+        cursor: isDraggingSelection ? 'default' : (isInGroup ? 'default' : (isDragging ? 'grabbing' : 'grab'))
       }}
       className={`relative rounded-2xl border transition-all duration-200 ${
         isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : 'border border-zinc-200 dark:border-zinc-700'

@@ -1,23 +1,27 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Plus, Minus } from 'lucide-react';
+import { Upload, Plus, Minus, Grid3x3 } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
 import DraggableImageCard from '@/components/Image/DraggableImageCard';
 import ContextMenu from '@/components/shared/ContextMenu';
 import CreateGroupModal from '@/components/modals/CreateGroupModal';
 import GroupContainer from '@/components/Canvas/GroupContainer';
+import AlignmentGuides from '@/components/Canvas/AlignmentGuides';
+import AlignmentToolbar from '@/components/Canvas/AlignmentToolbar';
 
 // Helper for robust ID generation
 const generateId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  // Fallback for older browsers or HTTP
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Grid configuration
+const GRID_SIZE = 20;
+
 export default function FreeformCanvas() {
-  const { activeBoard, addImage, deleteImage, createGroup, updateGroupName, deleteGroup, ungroupImages } = useBoards();
+  const { activeBoard, addImage, deleteImage, createGroup, updateGroupName, deleteGroup, ungroupImages, updateImagePosition } = useBoards();
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -28,6 +32,8 @@ export default function FreeformCanvas() {
     endY: number;
   } | null>(null);
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
+  const [draggingImageId, setDraggingImageId] = useState<string | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(true);
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
@@ -60,17 +66,15 @@ export default function FreeformCanvas() {
     if (!files || files.length === 0) return;
 
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
 
     Array.from(files).forEach((file) => {
       try {
-        // Validate file type
         if (!validTypes.includes(file.type)) {
           alert(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, WEBP allowed.`);
           return;
         }
 
-        // Validate file size
         if (file.size > maxSize) {
           alert(`File too large: ${file.name}. Maximum size is 10MB.`);
           return;
@@ -79,24 +83,32 @@ export default function FreeformCanvas() {
         const reader = new FileReader();
         
         reader.onload = (e) => {
-          // Check if still mounted
           if (!isMountedRef.current) return;
           if (!e.target?.result) return;
           
           const img = new Image();
           
           img.onload = () => {
-            // Check if still mounted
             if (!isMountedRef.current) return;
             
             const maxWidth = 400;
             const scale = Math.min(1, maxWidth / img.width);
             
+            // Calculate initial position
+            let x = 100 + Math.random() * 200;
+            let y = 100 + Math.random() * 200;
+            
+            // Snap to grid if enabled
+            if (snapToGrid) {
+              x = Math.round(x / GRID_SIZE) * GRID_SIZE;
+              y = Math.round(y / GRID_SIZE) * GRID_SIZE;
+            }
+            
             addImage({
               id: generateId(),
               src: e.target!.result as string,
-              x: 100 + Math.random() * 200,
-              y: 100 + Math.random() * 200,
+              x,
+              y,
               width: img.width * scale,
               height: img.height * scale,
               rotation: 0
@@ -123,7 +135,7 @@ export default function FreeformCanvas() {
         alert(`Error uploading ${file.name}. Please try again.`);
       }
     });
-  }, [addImage]);
+  }, [addImage, snapToGrid]);
 
   const zoomIn = useCallback(() => {
     setZoom(prev => Math.min(4, prev + 0.1));
@@ -328,21 +340,147 @@ export default function FreeformCanvas() {
     setSelectedImageIds([]);
   };
 
+  const handleAlign = (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (selectedImageIds.length < 2) return;
+    
+    const selectedImages = activeBoard.images.filter(img => 
+      selectedImageIds.includes(img.id)
+    );
+    
+    switch (type) {
+      case 'left': {
+        let minX = Math.min(...selectedImages.map(img => img.x));
+        
+        if (snapToGrid) {
+          minX = Math.round(minX / GRID_SIZE) * GRID_SIZE;
+        }
+        
+        selectedImages.forEach(img => {
+          updateImagePosition(img.id, minX, img.y);
+        });
+        break;
+      }
+      case 'center': {
+        const minX = Math.min(...selectedImages.map(img => img.x));
+        const maxX = Math.max(...selectedImages.map(img => img.x + img.width));
+        const centerX = (minX + maxX) / 2;
+        
+        selectedImages.forEach(img => {
+          let newX = centerX - img.width / 2;
+          
+          if (snapToGrid) {
+            newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+          }
+          
+          updateImagePosition(img.id, newX, img.y);
+        });
+        break;
+      }
+      case 'right': {
+        let maxX = Math.max(...selectedImages.map(img => img.x + img.width));
+        
+        selectedImages.forEach(img => {
+          let newX = maxX - img.width;
+          
+          if (snapToGrid) {
+            newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+          }
+          
+          updateImagePosition(img.id, newX, img.y);
+        });
+        break;
+      }
+      case 'top': {
+        let minY = Math.min(...selectedImages.map(img => img.y));
+        
+        if (snapToGrid) {
+          minY = Math.round(minY / GRID_SIZE) * GRID_SIZE;
+        }
+        
+        selectedImages.forEach(img => {
+          updateImagePosition(img.id, img.x, minY);
+        });
+        break;
+      }
+      case 'middle': {
+        const minY = Math.min(...selectedImages.map(img => img.y));
+        const maxY = Math.max(...selectedImages.map(img => img.y + img.height));
+        const centerY = (minY + maxY) / 2;
+        
+        selectedImages.forEach(img => {
+          let newY = centerY - img.height / 2;
+          
+          if (snapToGrid) {
+            newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+          }
+          
+          updateImagePosition(img.id, img.x, newY);
+        });
+        break;
+      }
+      case 'bottom': {
+        let maxY = Math.max(...selectedImages.map(img => img.y + img.height));
+        
+        selectedImages.forEach(img => {
+          let newY = maxY - img.height;
+          
+          if (snapToGrid) {
+            newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+          }
+          
+          updateImagePosition(img.id, img.x, newY);
+        });
+        break;
+      }
+    }
+  };
+
+  const handleDistribute = (axis: 'horizontal' | 'vertical') => {
+    if (selectedImageIds.length < 3) return;
+    
+    const selectedImages = activeBoard.images
+      .filter(img => selectedImageIds.includes(img.id))
+      .sort((a, b) => axis === 'horizontal' ? a.x - b.x : a.y - b.y);
+    
+    if (axis === 'horizontal') {
+      const first = selectedImages[0];
+      const last = selectedImages[selectedImages.length - 1];
+      const totalSpace = (last.x + last.width) - first.x;
+      const imageWidths = selectedImages.reduce((sum, img) => sum + img.width, 0);
+      const gap = (totalSpace - imageWidths) / (selectedImages.length - 1);
+      
+      let currentX = first.x + first.width + gap;
+      for (let i = 1; i < selectedImages.length - 1; i++) {
+        updateImagePosition(selectedImages[i].id, currentX, selectedImages[i].y);
+        currentX += selectedImages[i].width + gap;
+      }
+    } else {
+      const first = selectedImages[0];
+      const last = selectedImages[selectedImages.length - 1];
+      const totalSpace = (last.y + last.height) - first.y;
+      const imageHeights = selectedImages.reduce((sum, img) => sum + img.height, 0);
+      const gap = (totalSpace - imageHeights) / (selectedImages.length - 1);
+      
+      let currentY = first.y + first.height + gap;
+      for (let i = 1; i < selectedImages.length - 1; i++) {
+        updateImagePosition(selectedImages[i].id, selectedImages[i].x, currentY);
+        currentY += selectedImages[i].height + gap;
+      }
+    }
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Select All: Cmd/Ctrl+A
       if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
         e.preventDefault();
         handleSelectAll();
       }
       
-      // Deselect: Escape
       if (e.key === 'Escape') {
         handleDeselectAll();
       }
       
-      // Delete selected: Delete or Backspace
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedImageIds.length > 0) {
           e.preventDefault();
@@ -353,7 +491,6 @@ export default function FreeformCanvas() {
         }
       }
 
-      // Zoom shortcuts
       if ((e.ctrlKey || e.metaKey) && e.key === '0') {
         e.preventDefault();
         resetZoom();
@@ -364,11 +501,46 @@ export default function FreeformCanvas() {
         e.preventDefault();
         zoomOut();
       }
+      
+      // Arrow key nudging with grid snap
+      if (selectedImageIds.length > 0 && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        
+        // If snap to grid is on, move by grid size
+        // If off, move by 1px (or 10px with Shift)
+        const step = snapToGrid 
+          ? GRID_SIZE 
+          : (e.shiftKey ? 10 : 1);
+        
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        
+        selectedImageIds.forEach(id => {
+          const image = activeBoard.images.find(img => img.id === id);
+          if (image) {
+            let newX = image.x + dx;
+            let newY = image.y + dy;
+            
+            // Snap to grid
+            if (snapToGrid) {
+              newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+              newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+            }
+            
+            updateImagePosition(id, newX, newY);
+          }
+        });
+      }
+      
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'g') {
+        e.preventDefault();
+        setSnapToGrid(prev => !prev);
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImageIds, handleSelectAll, handleDeselectAll, deleteImage, zoomIn, zoomOut, resetZoom]);
+  }, [selectedImageIds, handleSelectAll, handleDeselectAll, deleteImage, zoomIn, zoomOut, resetZoom, activeBoard.images, updateImagePosition, snapToGrid]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -447,19 +619,36 @@ export default function FreeformCanvas() {
           })}
 
           {/* Render Images */}
-          {images.map((image) => (
-            <DraggableImageCard
-              key={image.id}
-              image={image}
-              isSelected={selectedImageIds.includes(image.id)}
-              onSelect={(e) => handleImageClick(image.id, e)}
-              zoom={zoom}
-              pan={panOffset}
-              isDraggingSelection={isDraggingSelection}
-            />
-          ))}
+          {images.map((image) => {
+            const imageGroup = groups.find(g => g.imageIds.includes(image.id));
+            
+            return (
+              <DraggableImageCard
+                key={image.id}
+                image={image}
+                isSelected={selectedImageIds.includes(image.id)}
+                onSelect={(e) => handleImageClick(image.id, e)}
+                zoom={zoom}
+                pan={panOffset}
+                isDraggingSelection={isDraggingSelection}
+                snapToGrid={snapToGrid}
+                gridSize={GRID_SIZE}
+                onDragStart={() => setDraggingImageId(image.id)}
+                onDragEnd={() => setDraggingImageId(null)}
+                isInGroup={!!imageGroup}
+              />
+            );
+          })}
         </motion.div>
       </div>
+
+      {/* Alignment Guides */}
+      <AlignmentGuides
+        draggedImage={activeBoard.images.find(img => img.id === draggingImageId) || null}
+        allImages={activeBoard.images.filter(img => img.id !== draggingImageId)}
+        zoom={zoom}
+        pan={panOffset}
+      />
 
       {/* Selection Rectangle */}
       {selectionRect && (
@@ -505,14 +694,32 @@ export default function FreeformCanvas() {
         </motion.div>
       )}
 
-      {/* Add Images button - Fixed top right, below TopBar */}
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        className="fixed top-24 right-8 px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border border-zinc-900 dark:border-zinc-50 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 flex items-center gap-2 z-10 font-medium shadow-lg"
-      >
-        <Upload size={18} />
-        Add Images
-      </button>
+      {/* Top Right Controls */}
+      <div className="fixed top-24 right-8 z-10 flex items-center gap-3">
+        {/* Snap to Grid - Icon Only */}
+        <button
+          onClick={() => setSnapToGrid(!snapToGrid)}
+          className={`
+            w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-lg
+            ${snapToGrid 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700'
+            }
+          `}
+          title={`Snap to Grid ${snapToGrid ? 'On' : 'Off'} (Cmd+Shift+G)`}
+        >
+          <Grid3x3 className="w-5 h-5" />
+        </button>
+        
+        {/* Add Images Button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-200 font-medium shadow-lg"
+        >
+          <Upload size={18} />
+          Add Images
+        </button>
+      </div>
 
       {/* Zoom controls */}
       <motion.div
@@ -548,6 +755,14 @@ export default function FreeformCanvas() {
           <Plus size={16} className="text-zinc-900 dark:text-zinc-50" />
         </button>
       </motion.div>
+
+      {/* Alignment Toolbar */}
+      <AlignmentToolbar
+        selectedCount={selectedImageIds.length}
+        onAlign={handleAlign}
+        onDistribute={handleDistribute}
+        onGroup={handleGroupSelection}
+      />
 
       {/* Context Menu */}
       <ContextMenu
