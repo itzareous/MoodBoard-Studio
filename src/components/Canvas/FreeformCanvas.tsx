@@ -3,15 +3,58 @@ import { motion } from 'framer-motion';
 import { Upload, Plus, Minus } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
 import DraggableImageCard from '@/components/Image/DraggableImageCard';
+import ContextMenu from '@/components/shared/ContextMenu';
+import CreateGroupModal from '@/components/modals/CreateGroupModal';
+import GroupContainer from '@/components/Canvas/GroupContainer';
+
+// Helper for robust ID generation
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers or HTTP
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
 
 export default function FreeformCanvas() {
-  const { activeBoard, addImage } = useBoards();
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const { activeBoard, addImage, deleteImage, createGroup, updateGroupName, deleteGroup, ungroupImages } = useBoards();
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [selectionRect, setSelectionRect] = useState<{
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+  } | null>(null);
+  const [isDraggingSelection, setIsDraggingSelection] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 }
+  });
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
+
+  // Track mounted state for cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Reset zoom and pan when active board changes
+  useEffect(() => {
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+    setSelectedImageIds([]);
+  }, [activeBoard.id]);
 
   const handleFileUpload = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -36,16 +79,21 @@ export default function FreeformCanvas() {
         const reader = new FileReader();
         
         reader.onload = (e) => {
+          // Check if still mounted
+          if (!isMountedRef.current) return;
           if (!e.target?.result) return;
           
           const img = new Image();
           
           img.onload = () => {
+            // Check if still mounted
+            if (!isMountedRef.current) return;
+            
             const maxWidth = 400;
             const scale = Math.min(1, maxWidth / img.width);
             
             addImage({
-              id: `img-${Date.now()}-${Math.random()}`,
+              id: generateId(),
               src: e.target!.result as string,
               x: 100 + Math.random() * 200,
               y: 100 + Math.random() * 200,
@@ -56,6 +104,7 @@ export default function FreeformCanvas() {
           };
           
           img.onerror = () => {
+            if (!isMountedRef.current) return;
             alert(`Failed to load image: ${file.name}`);
           };
           
@@ -63,6 +112,7 @@ export default function FreeformCanvas() {
         };
         
         reader.onerror = () => {
+          if (!isMountedRef.current) return;
           alert(`Failed to read file: ${file.name}`);
         };
         
@@ -98,16 +148,18 @@ export default function FreeformCanvas() {
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
       
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const sensitivity = 0.002;
+      const delta = -e.deltaY * sensitivity;
+      
       const newZoom = Math.max(0.25, Math.min(4, zoom + delta));
       
-      // Calculate the point in the canvas that's under the mouse
+      if (newZoom === zoom) return;
+      
       const zoomPoint = {
         x: (mouseX - panOffset.x) / zoom,
         y: (mouseY - panOffset.y) / zoom
       };
       
-      // Calculate new pan to keep that point under the mouse
       const newPan = {
         x: mouseX - zoomPoint.x * newZoom,
         y: mouseY - zoomPoint.y * newZoom
@@ -132,8 +184,176 @@ export default function FreeformCanvas() {
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
+  const handleImageClick = (imageId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (e.metaKey || e.ctrlKey) {
+      // Toggle mode - add or remove from selection
+      setSelectedImageIds(prev => 
+        prev.includes(imageId)
+          ? prev.filter(id => id !== imageId)
+          : [...prev, imageId]
+      );
+    } else if (e.shiftKey) {
+      // Add mode - always add to selection
+      setSelectedImageIds(prev => 
+        prev.includes(imageId) ? prev : [...prev, imageId]
+      );
+    } else {
+      // Replace mode - select only this image
+      setSelectedImageIds([imageId]);
+    }
+  };
+
+  const handleSelectAll = useCallback(() => {
+    const allImageIds = activeBoard.images.map(img => img.id);
+    setSelectedImageIds(allImageIds);
+  }, [activeBoard.images]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedImageIds([]);
+  }, []);
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    // Only start rectangle selection if clicking on canvas background
+    if (e.target !== canvasRef.current) return;
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const startX = (e.clientX - rect.left - panOffset.x) / zoom;
+    const startY = (e.clientY - rect.top - panOffset.y) / zoom;
+    
+    setIsDraggingSelection(true);
+    setSelectionRect({
+      startX,
+      startY,
+      endX: startX,
+      endY: startY
+    });
+    
+    // If not holding Cmd/Ctrl, clear existing selection
+    if (!e.metaKey && !e.ctrlKey) {
+      setSelectedImageIds([]);
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingSelection || !selectionRect) return;
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const endX = (e.clientX - rect.left - panOffset.x) / zoom;
+    const endY = (e.clientY - rect.top - panOffset.y) / zoom;
+    
+    setSelectionRect({
+      ...selectionRect,
+      endX,
+      endY
+    });
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (!isDraggingSelection || !selectionRect) return;
+    
+    // Calculate rectangle bounds
+    const rectLeft = Math.min(selectionRect.startX, selectionRect.endX);
+    const rectTop = Math.min(selectionRect.startY, selectionRect.endY);
+    const rectRight = Math.max(selectionRect.startX, selectionRect.endX);
+    const rectBottom = Math.max(selectionRect.startY, selectionRect.endY);
+    
+    // Find all images that intersect with rectangle
+    const selectedIds = activeBoard.images
+      .filter(image => {
+        const imgLeft = image.x;
+        const imgTop = image.y;
+        const imgRight = image.x + image.width;
+        const imgBottom = image.y + image.height;
+        
+        // Check if rectangles intersect
+        return !(
+          rectRight < imgLeft ||
+          rectLeft > imgRight ||
+          rectBottom < imgTop ||
+          rectTop > imgBottom
+        );
+      })
+      .map(img => img.id);
+    
+    // Add to existing selection or replace
+    setSelectedImageIds(prev => {
+      const combined = [...new Set([...prev, ...selectedIds])];
+      return combined;
+    });
+    
+    setIsDraggingSelection(false);
+    setSelectionRect(null);
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (e.target === canvasRef.current) {
+      setSelectedImageIds([]);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (selectedImageIds.length === 0) return;
+    
+    e.preventDefault();
+    
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY }
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ ...contextMenu, isOpen: false });
+  };
+
+  const handleGroupSelection = () => {
+    setShowCreateGroupModal(true);
+  };
+
+  const handleCreateGroup = (name: string) => {
+    createGroup(name, selectedImageIds);
+    setSelectedImageIds([]);
+  };
+
+  const handleDeleteSelected = () => {
+    selectedImageIds.forEach(id => {
+      deleteImage(id);
+    });
+    setSelectedImageIds([]);
+  };
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Select All: Cmd/Ctrl+A
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      
+      // Deselect: Escape
+      if (e.key === 'Escape') {
+        handleDeselectAll();
+      }
+      
+      // Delete selected: Delete or Backspace
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedImageIds.length > 0) {
+          e.preventDefault();
+          selectedImageIds.forEach(id => {
+            deleteImage(id);
+          });
+          setSelectedImageIds([]);
+        }
+      }
+
+      // Zoom shortcuts
       if ((e.ctrlKey || e.metaKey) && e.key === '0') {
         e.preventDefault();
         resetZoom();
@@ -146,15 +366,9 @@ export default function FreeformCanvas() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [zoomIn, zoomOut, resetZoom]);
-
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      setSelectedImageId(null);
-    }
-  };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImageIds, handleSelectAll, handleDeselectAll, deleteImage, zoomIn, zoomOut, resetZoom]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -169,15 +383,20 @@ export default function FreeformCanvas() {
   const canZoomOut = zoom > 0.25;
 
   const images = activeBoard?.images || [];
+  const groups = activeBoard?.groups || [];
 
   return (
     <div 
       ref={canvasRef}
       className="relative w-full h-full overflow-hidden bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200"
       style={{
-        cursor: 'grab'
+        cursor: isDraggingSelection ? 'crosshair' : 'grab'
       }}
       onClick={handleCanvasClick}
+      onMouseDown={handleCanvasMouseDown}
+      onMouseMove={handleCanvasMouseMove}
+      onMouseUp={handleCanvasMouseUp}
+      onContextMenu={handleContextMenu}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
@@ -202,18 +421,62 @@ export default function FreeformCanvas() {
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="relative w-[3000px] h-[3000px]"
         >
+          {/* Render Groups */}
+          {groups.map(group => {
+            const groupImages = images.filter(img =>
+              group.imageIds.includes(img.id)
+            );
+            
+            if (groupImages.length === 0) return null;
+            
+            return (
+              <GroupContainer
+                key={group.id}
+                group={group}
+                images={groupImages}
+                zoom={zoom}
+                onUpdateName={(newName) => updateGroupName(group.id, newName)}
+                onUngroup={() => ungroupImages(group.id)}
+                onDelete={() => {
+                  if (confirm(`Delete group "${group.name}" and all its images?`)) {
+                    deleteGroup(group.id, true);
+                  }
+                }}
+              />
+            );
+          })}
+
+          {/* Render Images */}
           {images.map((image) => (
             <DraggableImageCard
               key={image.id}
               image={image}
-              isSelected={selectedImageId === image.id}
-              onSelect={() => setSelectedImageId(image.id)}
+              isSelected={selectedImageIds.includes(image.id)}
+              onSelect={(e) => handleImageClick(image.id, e)}
               zoom={zoom}
               pan={panOffset}
+              isDraggingSelection={isDraggingSelection}
             />
           ))}
         </motion.div>
       </div>
+
+      {/* Selection Rectangle */}
+      {selectionRect && (
+        <div
+          style={{
+            position: 'absolute',
+            left: Math.min(selectionRect.startX, selectionRect.endX) * zoom + panOffset.x,
+            top: Math.min(selectionRect.startY, selectionRect.endY) * zoom + panOffset.y,
+            width: Math.abs(selectionRect.endX - selectionRect.startX) * zoom,
+            height: Math.abs(selectionRect.endY - selectionRect.startY) * zoom,
+            border: '2px dashed #3B82F6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}
+        />
+      )}
 
       {/* Empty state */}
       {images.length === 0 && (
@@ -285,6 +548,24 @@ export default function FreeformCanvas() {
           <Plus size={16} className="text-zinc-900 dark:text-zinc-50" />
         </button>
       </motion.div>
+
+      {/* Context Menu */}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={handleCloseContextMenu}
+        onGroupSelection={handleGroupSelection}
+        onDeleteSelected={handleDeleteSelected}
+        hasSelection={selectedImageIds.length > 0}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroupModal}
+        imageCount={selectedImageIds.length}
+        onClose={() => setShowCreateGroupModal(false)}
+        onCreateGroup={handleCreateGroup}
+      />
     </div>
   );
 }

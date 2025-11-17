@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { DraftingCompass } from 'lucide-react';
+import { DraftingCompass, Trash2 } from 'lucide-react';
 
 interface Board {
   id: string;
@@ -13,16 +14,21 @@ interface BoardCardProps {
   board: Board;
   isActive: boolean;
   onClick: () => void;
+  onDelete: (e: React.MouseEvent) => void;
 }
 
-export default function BoardCard({ board, isActive, onClick }: BoardCardProps) {
+export default function BoardCard({ board, isActive, onClick, onDelete }: BoardCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <motion.div
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
       className={`
-        p-5 rounded-3xl cursor-pointer transition-all duration-200
+        relative p-5 rounded-3xl cursor-pointer transition-all duration-200
         ${isActive 
           ? 'bg-zinc-100 dark:bg-zinc-700 border-2 border-zinc-400 dark:border-zinc-500' 
           : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
@@ -48,6 +54,19 @@ export default function BoardCard({ board, isActive, onClick }: BoardCardProps) 
           </p>
         </div>
       </div>
+      
+      {/* Delete Button - Shows on Hover */}
+      {isHovered && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(e);
+          }}
+          className="absolute top-3 right-3 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center z-10 transition-colors shadow-lg pointer-events-auto"
+        >
+          <Trash2 className="w-4 h-4 text-white" />
+        </button>
+      )}
     </motion.div>
   );
 }

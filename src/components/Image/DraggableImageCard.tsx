@@ -7,12 +7,20 @@ import { ImageData } from '@/context/BoardContext';
 interface DraggableImageCardProps {
   image: ImageData;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e: React.MouseEvent) => void;
   zoom: number;
   pan: { x: number; y: number };
+  isDraggingSelection?: boolean;
 }
 
-export default function DraggableImageCard({ image, isSelected, onSelect, zoom, pan }: DraggableImageCardProps) {
+export default function DraggableImageCard({ 
+  image, 
+  isSelected, 
+  onSelect, 
+  zoom, 
+  pan,
+  isDraggingSelection = false
+}: DraggableImageCardProps) {
   const { updateImagePosition, updateImageSize, deleteImage } = useBoards();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -91,35 +99,24 @@ export default function DraggableImageCard({ image, isSelected, onSelect, zoom, 
     };
   }, []);
 
-  // Keyboard shortcut for delete
-  useEffect(() => {
-    if (!isSelected) return;
-    
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        deleteImage(image.id);
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isSelected, image.id, deleteImage]);
-
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     deleteImage(image.id);
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(e);
+  };
+
   return (
     <motion.div
       ref={imageRef}
-      drag
+      drag={!isDraggingSelection}
       dragMomentum={false}
       dragElastic={0}
       onDragStart={() => {
         setIsDragging(true);
-        onSelect();
       }}
       onDragEnd={handleDragEnd}
       initial={{ opacity: 0, scale: 0.8 }}
@@ -131,30 +128,27 @@ export default function DraggableImageCard({ image, isSelected, onSelect, zoom, 
         top: image.y,
         width: image.width,
         height: image.height,
-        cursor: isDragging ? 'grabbing' : 'grab'
+        cursor: isDraggingSelection ? 'default' : (isDragging ? 'grabbing' : 'grab')
       }}
-      className={`rounded-2xl overflow-hidden border transition-all duration-200 ${
-        isSelected ? 'border-2 border-blue-500 dark:border-blue-400' : 'border border-zinc-200 dark:border-zinc-700'
+      className={`relative rounded-2xl border transition-all duration-200 ${
+        isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : 'border border-zinc-200 dark:border-zinc-700'
       }`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
+      onClick={handleClick}
     >
       <img
         src={image.src}
         alt="Mood board item"
-        className="w-full h-full object-cover pointer-events-none select-none"
+        className="w-full h-full object-cover pointer-events-none select-none rounded-2xl relative z-0"
         draggable={false}
       />
 
       {/* Selection border and handles */}
       {isSelected && !isDragging && (
         <>
-          {/* Delete button - top right with better visibility */}
+          {/* Delete button - HIGHEST Z-INDEX */}
           <button
             onClick={handleDelete}
-            className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 border-2 border-white dark:border-zinc-950 z-20 shadow-lg"
+            className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 border-2 border-white dark:border-zinc-950 shadow-lg z-50 pointer-events-auto"
           >
             <X size={16} />
           </button>
@@ -162,19 +156,19 @@ export default function DraggableImageCard({ image, isSelected, onSelect, zoom, 
           {/* Resize handles */}
           <div
             onMouseDown={(e) => handleResizeStart(e, 'nw')}
-            className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-nw-resize"
+            className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-nw-resize z-40"
           />
           <div
             onMouseDown={(e) => handleResizeStart(e, 'ne')}
-            className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-ne-resize"
+            className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-ne-resize z-40"
           />
           <div
             onMouseDown={(e) => handleResizeStart(e, 'sw')}
-            className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-sw-resize"
+            className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-sw-resize z-40"
           />
           <div
             onMouseDown={(e) => handleResizeStart(e, 'se')}
-            className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-se-resize"
+            className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 dark:bg-blue-400 border-2 border-white dark:border-zinc-950 rounded-full cursor-se-resize z-40"
           />
         </>
       )}
