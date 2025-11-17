@@ -22,11 +22,23 @@ export interface Group {
   y: number;
 }
 
+export interface Note {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  createdAt: string;
+}
+
 interface Board {
   id: string;
   name: string;
   images: ImageData[];
   groups: Group[];
+  notes: Note[];
   createdAt: Date;
   viewMode: 'grid' | 'freeform';
 }
@@ -51,15 +63,31 @@ interface BoardContextType {
   updateGroupPosition: (groupId: string, deltaX: number, deltaY: number) => void;
   updateGroupLayout: (groupId: string, layoutDirection: 'horizontal' | 'vertical') => void;
   updateGroupGap: (groupId: string, gap: number) => void;
+  createNote: (boardId: string, text: string, x: number, y: number) => string;
+  updateNoteText: (boardId: string, noteId: string, text: string) => void;
+  updateNotePosition: (boardId: string, noteId: string, x: number, y: number) => void;
+  updateNoteSize: (boardId: string, noteId: string, width: number, height: number) => void;
+  updateNoteColor: (boardId: string, noteId: string, color: string) => void;
+  deleteNote: (boardId: string, noteId: string) => void;
 }
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
+
+const NOTE_COLORS = [
+  '#FEF3C7', // Yellow
+  '#DBEAFE', // Blue
+  '#D1FAE5', // Green
+  '#FCE7F3', // Pink
+  '#E0E7FF', // Indigo
+  '#FED7AA', // Orange
+];
 
 const defaultBoard: Board = {
   id: '1',
   name: 'Brand Inspiration',
   images: [],
   groups: [],
+  notes: [],
   createdAt: new Date('2024-01-15'),
   viewMode: 'freeform'
 };
@@ -71,6 +99,7 @@ const sampleBoards: Board[] = [
     name: 'Color Palette Ideas',
     images: [],
     groups: [],
+    notes: [],
     createdAt: new Date('2024-01-20'),
     viewMode: 'freeform'
   },
@@ -79,6 +108,7 @@ const sampleBoards: Board[] = [
     name: 'UI References',
     images: [],
     groups: [],
+    notes: [],
     createdAt: new Date('2024-01-25'),
     viewMode: 'grid'
   }
@@ -122,6 +152,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         return parsed.map((board: any) => ({
           ...board,
           groups: board.groups || [],
+          notes: board.notes || [],
           createdAt: new Date(board.createdAt)
         }));
       } catch (error) {
@@ -178,6 +209,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       name: name,
       images: [],
       groups: [],
+      notes: [],
       createdAt: new Date(),
       viewMode: 'grid',
     };
@@ -420,6 +452,87 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const createNote = (boardId: string, text: string, x: number, y: number) => {
+    const newNote: Note = {
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text,
+      x,
+      y,
+      width: 250,
+      height: 200,
+      color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
+      createdAt: new Date().toISOString(),
+    };
+    
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? { ...board, notes: [...board.notes, newNote] }
+        : board
+    ));
+    
+    return newNote.id;
+  };
+
+  const updateNoteText = (boardId: string, noteId: string, text: string) => {
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? {
+            ...board,
+            notes: board.notes.map(note =>
+              note.id === noteId ? { ...note, text } : note
+            )
+          }
+        : board
+    ));
+  };
+
+  const updateNotePosition = (boardId: string, noteId: string, x: number, y: number) => {
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? {
+            ...board,
+            notes: board.notes.map(note =>
+              note.id === noteId ? { ...note, x, y } : note
+            )
+          }
+        : board
+    ));
+  };
+
+  const updateNoteSize = (boardId: string, noteId: string, width: number, height: number) => {
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? {
+            ...board,
+            notes: board.notes.map(note =>
+              note.id === noteId ? { ...note, width, height } : note
+            )
+          }
+        : board
+    ));
+  };
+
+  const updateNoteColor = (boardId: string, noteId: string, color: string) => {
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? {
+            ...board,
+            notes: board.notes.map(note =>
+              note.id === noteId ? { ...note, color } : note
+            )
+          }
+        : board
+    ));
+  };
+
+  const deleteNote = (boardId: string, noteId: string) => {
+    setBoards(prev => prev.map(board =>
+      board.id === boardId
+        ? { ...board, notes: board.notes.filter(note => note.id !== noteId) }
+        : board
+    ));
+  };
+
   return (
     <BoardContext.Provider value={{ 
       boards, 
@@ -440,7 +553,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       ungroupImages,
       updateGroupPosition,
       updateGroupLayout,
-      updateGroupGap
+      updateGroupGap,
+      createNote,
+      updateNoteText,
+      updateNotePosition,
+      updateNoteSize,
+      updateNoteColor,
+      deleteNote
     }}>
       {children}
     </BoardContext.Provider>

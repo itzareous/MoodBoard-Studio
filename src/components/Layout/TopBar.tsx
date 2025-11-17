@@ -67,7 +67,7 @@ export default function TopBar() {
         initial={{ y: -64, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
-        className="h-20 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between px-8 py-4 sticky top-0 z-10 transition-colors duration-200"
+        className="h-20 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between px-8 py-4 sticky top-0 z-50 transition-colors duration-200"
       >
         {/* Left: Board name */}
         <div 

@@ -73,7 +73,7 @@ export default function SettingsPopover({
           exit={{ opacity: 0, scale: 0.95, y: -10 }}
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           style={popoverStyle}
-          className="w-64 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3 z-50 transition-colors duration-200"
+          className="w-64 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl p-3 z-[9999] transition-colors duration-200"
         >
           <div className="space-y-1">
             {/* Appearance Section */}

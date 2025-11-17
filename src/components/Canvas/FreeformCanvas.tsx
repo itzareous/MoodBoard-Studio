@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Plus, Minus, Grid3x3 } from 'lucide-react';
+import { Upload, Plus, Minus, Grid3x3, StickyNote } from 'lucide-react';
 import { useBoards } from '@/context/BoardContext';
 import DraggableImageCard from '@/components/Image/DraggableImageCard';
 import ContextMenu from '@/components/shared/ContextMenu';
@@ -8,6 +8,7 @@ import CreateGroupModal from '@/components/modals/CreateGroupModal';
 import GroupContainer from '@/components/Canvas/GroupContainer';
 import AlignmentGuides from '@/components/Canvas/AlignmentGuides';
 import AlignmentToolbar from '@/components/Canvas/AlignmentToolbar';
+import NoteCard from './NoteCard';
 
 // Helper for robust ID generation
 const generateId = () => {
@@ -21,7 +22,7 @@ const generateId = () => {
 const GRID_SIZE = 20;
 
 export default function FreeformCanvas() {
-  const { activeBoard, addImage, deleteImage, createGroup, updateGroupName, deleteGroup, ungroupImages, updateImagePosition } = useBoards();
+  const { activeBoard, addImage, deleteImage, createGroup, updateGroupName, deleteGroup, ungroupImages, updateImagePosition, createNote } = useBoards();
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -469,6 +470,22 @@ export default function FreeformCanvas() {
     }
   };
 
+  const handleCreateNote = () => {
+    // Create note at center of viewport
+    const centerX = (window.innerWidth / 2 - panOffset.x) / zoom;
+    const centerY = (window.innerHeight / 2 - panOffset.y) / zoom;
+    
+    const noteId = createNote(activeBoard.id, '', centerX, centerY);
+    
+    // Auto-focus the new note for editing
+    setTimeout(() => {
+      const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
+      if (noteElement) {
+        (noteElement as HTMLElement).click();
+      }
+    }, 100);
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -556,6 +573,7 @@ export default function FreeformCanvas() {
 
   const images = activeBoard?.images || [];
   const groups = activeBoard?.groups || [];
+  const notes = activeBoard?.notes || [];
 
   return (
     <div 
@@ -639,6 +657,18 @@ export default function FreeformCanvas() {
               />
             );
           })}
+
+          {/* Render Notes */}
+          {notes.map(note => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              zoom={zoom}
+              pan={panOffset}
+              snapToGrid={snapToGrid}
+              gridSize={GRID_SIZE}
+            />
+          ))}
         </motion.div>
       </div>
 
@@ -668,7 +698,7 @@ export default function FreeformCanvas() {
       )}
 
       {/* Empty state */}
-      {images.length === 0 && (
+      {images.length === 0 && notes.length === 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -709,6 +739,15 @@ export default function FreeformCanvas() {
           title={`Snap to Grid ${snapToGrid ? 'On' : 'Off'} (Cmd+Shift+G)`}
         >
           <Grid3x3 className="w-5 h-5" />
+        </button>
+        
+        {/* Add Note Button */}
+        <button
+          onClick={handleCreateNote}
+          className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-500 text-yellow-900 flex items-center justify-center transition-colors shadow-lg"
+          title="Add Note"
+        >
+          <StickyNote className="w-5 h-5" />
         </button>
         
         {/* Add Images Button */}

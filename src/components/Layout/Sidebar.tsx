@@ -6,6 +6,8 @@ import BoardCard from '@/components/Board/BoardCard';
 import SettingsPopover from '@/components/shared/SettingsPopover';
 import NewBoardModal from '@/components/modals/NewBoardModal';
 import DeleteBoardModal from '@/components/modals/DeleteBoardModal';
+import iconLogoDark from '/images/icon logo dark.svg';
+import iconLogoLight from '/images/icon logo light.svg';
 
 export default function Sidebar() {
   const { boards, activeBoardId, setActiveBoardId, createBoard, deleteBoard } = useBoards();
@@ -37,8 +39,17 @@ export default function Sidebar() {
         {/* Logo Section - Fixed Top */}
         <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-zinc-50 flex items-center justify-center transition-colors duration-200">
-              <span className="text-white dark:text-zinc-900 text-xl font-bold">C</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200">
+              <img 
+                src={iconLogoLight} 
+                alt="Curate Logo" 
+                className="w-10 h-10 dark:hidden"
+              />
+              <img 
+                src={iconLogoDark} 
+                alt="Curate Logo" 
+                className="w-10 h-10 hidden dark:block"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 transition-colors duration-200">
